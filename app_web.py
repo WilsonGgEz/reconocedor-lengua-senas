@@ -72,6 +72,18 @@ def predict():
 
     return jsonify(prediccion=prediccion, confianza=float(confianza))
 
+@app.route('/health')
+def health_check():
+    """
+    Un endpoint simple para verificar el estado interno de la aplicación.
+    """
+    return jsonify(
+        status="ok",
+        mensaje="Estado del servidor de reconocimiento de señas",
+        static_model_loaded=sistema_señas.modelo_estatico_entrenado,
+        dynamic_model_loaded=sistema_señas.modelo_dinamico_entrenado
+    )
+
 if __name__ == '__main__':
     # Para desarrollo local, waitress sigue siendo una buena opción
     from waitress import serve

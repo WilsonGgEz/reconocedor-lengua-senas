@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reconocedor de Lengua de Señas - Lógica en Cliente</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #121212; color: #e0e0e0; display: flex; flex-direction: column; align-items: center; padding: 20px; gap: 20px; }
+        .main-container { display: flex; gap: 20px; align-items: flex-start; }
+        h1 { color: #bb86fc; text-align: center; width: 100%; }
+        .container { position: relative; width: 640px; height: 480px; }
+        #videoElement, #outputCanvas { position: absolute; top: 0; left: 0; border-radius: 8px; transform: scaleX(-1); }
+        .status { background-color: #1e1e1e; padding: 15px; border-radius: 8px; width: 300px; box-sizing: border-box; }
+        button { background-color: #bb86fc; color: #121212; border: none; padding: 10px 15px; font-size: 16px; border-radius: 5px; cursor: pointer; margin-top: 10px; transition: background-color 0.3s; width: 100%; }
+        button:hover { background-color: #9f6de0; }
+        p { margin: 10px 0; font-size: 1.1em; }
+        #prediccion { min-height: 50px; background-color: #2c2c2c; padding: 10px; border-radius: 5px; font-family: 'Courier New', Courier, monospace; word-wrap: break-word; }
+    .sentence-container {
+        width: 100%;
+        max-width: 980px; /* Ancho total del contenedor de la frase */
+        margin-top: 20px;
+        background-color: #1e1e1e;
+        padding: 15px;
+        border-radius: 8px;
+        box-sizing: border-box;}
+    .text-box {
+        min-height: 60px;
+        background-color: #2c2c2c;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: 'Courier New', Courier, monospace;
+        word-wrap: break-word; /* Para que el texto no se salga */
+        font-size: 1.2em;
+        color: #fff;
+        border: 1px solid #444;}
+    .clear-btn {
+        background-color: #cf6679; /* Un color rojo para el botón de borrar */
+        margin-top: 10px;
+        width: auto; /* Hacemos que el botón no ocupe todo el ancho */
+        padding: 8px 15px;}
+    .clear-btn:hover {background-color: #b04e5f;}
+    .speak-btn {
+        background-color: #03dac6; /* Un color verde/turquesa */
+        margin-top: 10px;
+        width: auto;
+        padding: 8px 15px;}
+    .speak-btn:hover {
+        background-color: #01bfa5;}
+    #backspaceBtn {
+        background-color: #cf6679;
+        color: #121212;}
+    #backspaceBtn:hover {
+        background-color: #b04e5f;}
+    #addSpaceBtn {
+        background-color: #555; /* Un color neutro para el botón de espacio */
+        color: #fff;}
+    #addSpaceBtn:hover {
+        background-color: #777;}
+
+        @keyframes blink {50% 
+        {
+            opacity: 0;
+        }}
+
+    /* 2. Creamos el cursor como un "pseudo-elemento" después del contenido de #sentenceBox */
+    #sentenceBox::after {
+        content: ''; /* Obligatorio para que el pseudo-elemento se muestre */
+        display: inline-block;
+        width: 2px; /* Ancho del cursor */
+        height: 1.1em; /* Altura del cursor, relativa al tamaño de la fuente */
+        background-color: #fff; /* Color del cursor */
+        vertical-align: bottom;
+        margin-left: 2px; /* Pequeño espacio entre el texto y el cursor */
+        
+        /* 3. Aplicamos la animación de parpadeo */
+        animation: blink 1s step-end infinite;
+    }
+
+    </style>
+</head>
+<body>
+    <h1>Reconocedor de Lengua de Señas</h1>
+    <div class="main-container">
+        <div class="container">
+            <video id="videoElement" style="display: none;"></video>
+            <canvas id="outputCanvas" width="640" height="480"></canvas>
+        </div>
+        <div class="status">
+            <h3>Estado del Sistema</h3>
+            <p>Modo Actual: <strong id="modo">ESTATICO</strong></p>
+            <button id="toggleModeBtn">🔄 Cambiar Modo</button>
+            <hr style="margin: 15px 0;">
+            
+            <h3>Predicción Actual</h3>
+            <p id="prediccion">Cargando...</p>
+
+            <button id="fixPredictionBtn">➕ Añadir Letra/Palabra</button>
+            <button id="backspaceBtn">⌫ Retroceso</button>
+            <button id="addSpaceBtn"> Espacio</button>
+        </div>
+    </div>
+
+    <div class="sentence-container">
+        <h3>Frase Generada</h3>
+        <div id="sentenceBox" class="text-box"></div>
+        <button id="speakBtn" class="speak-btn">🔊 Leer Frase</button>
+        <button id="clearSentenceBtn" class="clear-btn">🗑️ Borrar Todo</button>
+    </div>
+
+    <script type="module">
+    document.addEventListener('DOMContentLoaded', (event) => {
+        const videoElement = document.getElementById('videoElement');
+        const canvasElement = document.getElementById('outputCanvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        const prediccionElement = document.getElementById('prediccion');
+        const modoElement = document.getElementById('modo');
+        const toggleModeBtn = document.getElementById('toggleModeBtn');
+        const fixPredictionBtn = document.getElementById('fixPredictionBtn');
+        const sentenceBox = document.getElementById('sentenceBox');
+        const clearSentenceBtn = document.getElementById('clearSentenceBtn');
+        const speakBtn = document.getElementById('speakBtn');
+        const addSpaceBtn = document.getElementById('addSpaceBtn');
+        const backspaceBtn = document.getElementById('backspaceBtn');
+
+        // --- ESTADO GLOBAL Y PARÁMETROS DE OPTIMIZACIÓN ---
+        let modoActual = 'estatico';
+        const FRAMES_ESTATICO = 10;
+        const FRAMES_DINAMICO = 40;
+        let frameBuffer = [];
+        let positionsBuffer = [];
+        let velocitiesBuffer = [];
+        let isChangingMode = false;
+
+        // OPTIMIZACIÓN #2: Throttling de peticiones
+        let lastSendTimestamp = 0;
+        const SEND_INTERVAL_MS = 300; // Enviar como máximo una petición cada 300ms
+        let currentBestPrediction = ""; // Guarda la última predicción válida
+        let fullSentence = ""; // Guarda la oración completa
+
+        if ('speechSynthesis' in window) {
+            function speakText() {
+                // 1. Obtenemos el texto de la caja de la frase.
+                const textToSpeak = sentenceBox.textContent;
+
+                // 2. Si no hay nada que leer, no hacemos nada.
+                if (!textToSpeak || textToSpeak.trim() === '') {
+                    console.log("No hay texto para leer.");
+                    return;
+                }
+
+                // 3. Detenemos cualquier locución anterior para evitar que se solapen.
+                window.speechSynthesis.cancel();
+
+                // 4. Creamos un objeto "utterance", que es la petición de voz.
+                const utterance = new SpeechSynthesisUtterance(textToSpeak);
+
+                // 5. Configuramos la voz (opcional pero recomendado).
+                utterance.lang = 'es-CL'; // Español de Chile, para una mejor entonación. Puedes usar 'es-ES', 'es-MX', etc.
+                utterance.rate = 1;      // Velocidad de la voz (1 es normal).
+                utterance.pitch = 1;     // Tono de la voz (1 es normal).
+
+                // 6. ¡Le pedimos al navegador que hable!
+                window.speechSynthesis.speak(utterance);
+            }
+
+            // Asignamos la función al clic del nuevo botón.
+            speakBtn.addEventListener('click', speakText);
+
+        } else {
+            // Si el navegador no es compatible, ocultamos el botón y avisamos por consola.
+            console.log("Lo siento, tu navegador no soporta Text-to-Speech.");
+            speakBtn.style.display = 'none';
+        }
+
+        // --- LÓGICA DE CÁLCULO DE CARACTERÍSTICAS ---
+        function calculateFeatures(landmarks) {
+            // OPTIMIZACIÓN #3: Reducir la precisión de los datos enviados
+            const positions = landmarks.flatMap(p => [
+                parseFloat(p.x.toFixed(5)),
+                parseFloat(p.y.toFixed(5)),
+                parseFloat(p.z.toFixed(5))
+            ]);
+
+            if (modoActual === 'estatico') {
+                return positions;
+            }
+
+            // Lógica dinámica
+            positionsBuffer.push(positions);
+            if (positionsBuffer.length > 3) positionsBuffer.shift();
+
+            let velocities = Array(63).fill(0);
+            if (positionsBuffer.length > 1) {
+                const lastPos = positionsBuffer[positionsBuffer.length - 1];
+                const prevPos = positionsBuffer[positionsBuffer.length - 2];
+                velocities = lastPos.map((v, i) => v - prevPos[i]);
+            }
+
+            velocitiesBuffer.push(velocities);
+            if (velocitiesBuffer.length > 2) velocitiesBuffer.shift();
+
+            let accelerations = Array(63).fill(0);
+            if (velocitiesBuffer.length > 1) {
+                const lastVel = velocitiesBuffer[velocitiesBuffer.length - 1];
+                const prevVel = velocitiesBuffer[velocitiesBuffer.length - 2];
+                accelerations = lastVel.map((v, i) => v - prevVel[i]);
+            }
+
+            let globalFeatures = Array(10).fill(0);
+            const velMagnitudes = velocities.map(v => Math.abs(v));
+            if (velMagnitudes.length > 0) {
+                globalFeatures[0] = velMagnitudes.reduce((a, b) => a + b, 0) / velMagnitudes.length;
+            }
+
+            return [...positions, ...velocities, ...accelerations, ...globalFeatures];
+        }
+
+        // --- FUNCIONES DE COMUNICACIÓN Y CONTROL (sin cambios) ---
+        async function sendFeaturesToServer(sequence) {
+                try {
+                    const response = await fetch('/predict', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({
+                feature_vector: sequence,
+                mode: modoActual // Le decimos al servidor en qué modo se generaron estos datos
+            })
+        });
+        if (!response.ok) { 
+            console.error("Error del servidor:", response.status, response.statusText);
+            const errorData = await response.json();
+            console.error("Detalles del error:", errorData.error);
+            return;
+        }
+        const result = await response.json();
+
+        if (result.prediccion) {
+                    // La mostramos en la caja de predicción actual
+                    prediccionElement.innerHTML = `${result.prediccion} <span style="color: #03dac6;">(${(result.confianza * 100).toFixed(1)}%)</span>`;
+                    // Y la guardamos en nuestra variable temporal
+                    currentBestPrediction = result.prediccion;
+                } else {
+                    // Si no hay predicción, limpiamos la variable temporal
+                    currentBestPrediction = "";
+                }
+            } catch (error) {
+                console.error("Error de conexión:", error);
+            }
+        }
+         function fixPrediction() {
+            if (currentBestPrediction) {
+                // 1. Añadimos la predicción a la frase
+                fullSentence += currentBestPrediction;
+
+                // 2. LÓGICA INTELIGENTE:
+                // Si la predicción es una palabra (más de 1 caracter), añadimos un espacio automáticamente.
+                // Si es solo una letra, NO añadimos espacio, para poder formar palabras.
+                if (currentBestPrediction.length > 1) {
+                    fullSentence += " ";
+                }
+
+                // 3. Actualizamos la interfaz
+                sentenceBox.textContent = fullSentence;
+                currentBestPrediction = "";
+                prediccionElement.textContent = "¡Añadido!";
+                setTimeout(() => {
+                    if (!currentBestPrediction) prediccionElement.textContent = "Esperando gesto...";
+                }, 1000);
+            }
+        }
+
+         function addSpace() {
+            // Añadimos un espacio, pero evitamos añadir dobles espacios
+            if (fullSentence.length > 0 && fullSentence.slice(-1) !== ' ') {
+                fullSentence += " ";
+                sentenceBox.textContent = fullSentence;
+            }
+        }
+
+        function clearSentence() {
+            fullSentence = "";
+            currentBestPrediction = "";
+            sentenceBox.textContent = "";
+            prediccionElement.textContent = "Esperando gesto...";
+        }
+
+        function backspace() {
+            // Si hay texto en la frase...
+            if (fullSentence.length > 0) {
+                // Usamos slice() para devolver una nueva cadena sin el último caracter.
+                fullSentence = fullSentence.slice(0, -1);
+                // Actualizamos la caja de texto.
+                sentenceBox.textContent = fullSentence;
+            }
+        }
+
+        // Asignamos las funciones a los clics de los botones
+        fixPredictionBtn.addEventListener('click', fixPrediction);
+        clearSentenceBtn.addEventListener('click', clearSentence);
+        addSpaceBtn.addEventListener('click', addSpace);
+        backspaceBtn.addEventListener('click', backspace);
+
+        async function toggleMode() {
+            if (isChangingMode) return; // Si ya estamos cambiando, no hacer nada
+
+            // 1. ACTIVAR LA PAUSA Y LIMPIAR
+            isChangingMode = true;
+            prediccionElement.textContent = "Cambiando modo...";
+            frameBuffer = []; // Limpieza inmediata del búfer de datos
+            positionsBuffer = [];
+            velocitiesBuffer = [];
+
+            try {
+                // 2. ENVIAR LA PETICIÓN DE CAMBIO
+                const response = await fetch('/toggle_mode', { method: 'POST' });
+                const data = await response.json();
+                modoActual = data.modo;
+                modoElement.textContent = modoActual.toUpperCase();
+            } catch (error) {
+                console.error("Error al cambiar de modo:", error);
+            } finally {
+                // 3. DESACTIVAR LA PAUSA, HAYA O NO ERROR
+                isChangingMode = false;
+                prediccionElement.textContent = "Esperando gesto...";
+            }
+        }
+        fixPredictionBtn.addEventListener('click', fixPrediction);
+        clearSentenceBtn.addEventListener('click', clearSentence);
+        toggleModeBtn.addEventListener('click', toggleMode);
+
+        // --- BUCLE PRINCIPAL DE PROCESAMIENTO ---
+        function onResults(results) {
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const landmarks = results.multiHandLandmarks[0];
+                drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, { color: '#00FF00', lineWidth: 5 });
+                drawLandmarks(canvasCtx, landmarks, { color: '#FF0000', lineWidth: 2 });
+
+                if (isChangingMode) {
+                    canvasCtx.restore();
+                    return;
+                }
+
+                const currentFeatures = calculateFeatures(landmarks);
+                frameBuffer.push(currentFeatures);
+
+                const framesNeeded = modoActual === 'estatico' ? FRAMES_ESTATICO : FRAMES_DINAMICO;
+                if (frameBuffer.length > framesNeeded) {
+                    frameBuffer.shift();
+                }
+
+                // APLICANDO OPTIMIZACIÓN #2 (Throttling)
+                const now = Date.now();
+                if (!isChangingMode && frameBuffer.length === framesNeeded && (now - lastSendTimestamp > SEND_INTERVAL_MS)) {
+                    lastSendTimestamp = now;
+                    sendFeaturesToServer(frameBuffer);
+                }
+            } else {
+                positionsBuffer = [];
+                velocitiesBuffer = [];
+            }
+            canvasCtx.restore();
+        }
+
+        // --- INICIALIZACIÓN DE MEDIAPIPE ---
+        const hands = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+        hands.setOptions({
+            maxNumHands: 1,
+            // MANTENEMOS la máxima complejidad para mayor precisión, como solicitaste.
+            modelComplexity: 1, 
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+        hands.onResults(onResults);
+
+        // --- INICIALIZACIÓN DE LA CÁMARA (sin cambios) ---
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                await hands.send({ image: videoElement });
+            },
+            width: 640,
+            height: 480
+        });
+        camera.start();
+        prediccionElement.textContent = "Esperando gesto...";
+    });
+</script>
+</body>
+</html>

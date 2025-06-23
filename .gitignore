@@ -1,0 +1,16 @@
+# Ignorar carpetas de entorno virtual de Python
+/venv/
+/env/
+.env
+
+# Ignorar la carpeta de caché de Python
+__pycache__/
+*.pyc
+
+# Opcional: Ignorar los datos de entrenamiento si son muy grandes
+# Descomenta la siguiente línea si no quieres subir tus archivos .pkl
+# /datos/
+
+# Ignorar archivos específicos del sistema operativo
+.DS_Store
+Thumbs.db

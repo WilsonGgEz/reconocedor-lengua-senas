@@ -15,7 +15,7 @@ from sklearn.preprocessing import LabelEncoder
 import pickle
 import os
 from datetime import datetime
-import pyttsx3
+#import pyttsx3
 import math
 
 class LenguaSeñasDual:
@@ -69,14 +69,14 @@ class LenguaSeñasDual:
         self.modelo_dinamico_entrenado = False
         
         # Text-to-speech
-        try:
-            self.tts = pyttsx3.init()
-            self.tts.setProperty('rate', 150)
-            self.tts.setProperty('volume', 0.9)
-            self.tts_disponible = True
-        except:
-            print("⚠️ Text-to-speech no disponible")
-            self.tts_disponible = False
+        #try:
+        #    self.tts = pyttsx3.init()
+        #    self.tts.setProperty('rate', 150)
+        #    self.tts.setProperty('volume', 0.9)
+        #    self.tts_disponible = True
+        #except:
+        #    print("⚠️ Text-to-speech no disponible")
+        #    self.tts_disponible = False
         
         # Buffers
         self.buffer_frames_estatico = []
@@ -921,14 +921,14 @@ class LenguaSeñasDual:
         print(f"🗣️ Reconocido: {palabra}")
         print(f"📝 Texto: {' '.join(self.texto_completo)}")
         
-        if self.tts_disponible:
-            try:
-                self.tts.say(palabra)
-                self.tts.runAndWait()
-                self.ultima_palabra_reconocida = ""
-            except Exception as e:
-                print(f"⚠️ Error TTS: {e}")
-                self.ultima_palabra_reconocida = ""
+        #if self.tts_disponible:
+        #    try:
+        #        self.tts.say(palabra)
+        #        self.tts.runAndWait()
+        #        self.ultima_palabra_reconocida = ""
+        #    except Exception as e:
+        #        print(f"⚠️ Error TTS: {e}")
+        #        self.ultima_palabra_reconocida = ""
     
     def _guardar_texto_final(self):
         """Guardar texto reconocido"""

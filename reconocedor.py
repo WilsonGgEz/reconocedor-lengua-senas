@@ -599,29 +599,44 @@ class LenguaSeñasDual:
         return X, y, palabras
     
     def _cargar_modelos(self):
-        """Cargar ambos modelos"""
+        """Cargar ambos modelos (versión WEB) con diagnóstico mejorado."""
+        print("--- INICIANDO CARGA DE MODELOS ---")
+        
+        modelo_estatico_path = 'modelos/modelo_estatico_web.h5'
+        encoder_estatico_path = 'modelos/encoder_estatico_web.pkl'
+        modelo_dinamico_path = 'modelos/modelo_dinamico_web.h5'
+        encoder_dinamico_path = 'modelos/encoder_dinamico_web.pkl'
+
         # Modelo estático
-        try:
-            if os.path.exists('modelos/modelo_estatico.h5'):
-                self.modelo_estatico = tf.keras.models.load_model('modelos/modelo_estatico.h5')
-                with open('modelos/encoder_estatico.pkl', 'rb') as f:
+        print(f"Buscando modelo estático en: '{os.path.abspath(modelo_estatico_path)}'")
+        if os.path.exists(modelo_estatico_path):
+            try:
+                self.modelo_estatico = tf.keras.models.load_model(modelo_estatico_path)
+                with open(encoder_estatico_path, 'rb') as f:
                     self.encoder_estatico = pickle.load(f)
                 self.modelo_estatico_entrenado = True
-                print("✅ Modelo estático cargado")
-        except Exception as e:
-            print(f"⚠️ Error cargando modelo estático: {e}")
-        
+                print("✅ Modelo estático (WEB) cargado con éxito.")
+            except Exception as e:
+                print(f"⚠️ Error al procesar el archivo del modelo estático: {e}")
+        else:
+            print("❌ ¡ERROR CRÍTICO! No se encontró el archivo del modelo estático.")
+
         # Modelo dinámico
-        try:
-            if os.path.exists('modelos/modelo_dinamico.h5'):
-                self.modelo_dinamico = tf.keras.models.load_model('modelos/modelo_dinamico.h5')
-                with open('modelos/encoder_dinamico.pkl', 'rb') as f:
+        print(f"Buscando modelo dinámico en: '{os.path.abspath(modelo_dinamico_path)}'")
+        if os.path.exists(modelo_dinamico_path):
+            try:
+                self.modelo_dinamico = tf.keras.models.load_model(modelo_dinamico_path)
+                with open(encoder_dinamico_path, 'rb') as f:
                     self.encoder_dinamico = pickle.load(f)
                 self.modelo_dinamico_entrenado = True
-                print("✅ Modelo dinámico cargado")
-        except Exception as e:
-            print(f"⚠️ Error cargando modelo dinámico: {e}")
-    
+                print("✅ Modelo dinámico (WEB) cargado con éxito.")
+            except Exception as e:
+                print(f"⚠️ Error al procesar el archivo del modelo dinámico: {e}")
+        else:
+            print("❌ ¡ERROR CRÍTICO! No se encontró el archivo del modelo dinámico.")
+
+        print("--- CARGA DE MODELOS FINALIZADA ---")
+        
     def modo_reconocimiento(self):
         """Reconocimiento simplificado con visualización en webcam"""
         print("\n🎯 MODO RECONOCIMIENTO")

@@ -1,34 +1,27 @@
 #!/usr/bin/env bash
-# exit on error
+# Este script detendrá la construcción si algún comando falla
 set -o errexit
 
-echo "--- Iniciando proceso de construcción v2 ---"
+echo "--- Iniciando proceso de construcción final ---"
 
-# ** VERIFICA ESTE NÚMERO DE VERSIÓN **
-# Este debe ser el nombre de la "tag" que creaste en tu Release de GitHub (ej: v1.0 o v1.1)
-RELEASE_VERSION="v1.2"
-
-# Construimos la URL base para no repetir
-BASE_URL="https://github.com/WilsonGgEz/reconocedor-lengua-senas/releases/download/${RELEASE_VERSION}"
-
-# 1. Instalar dependencias
-echo "--- Instalando dependencias de Python ---"
+# --- Paso 1: Instalar dependencias de Python ---
+echo "--- Instalando dependencias de requirements.txt ---"
 pip install -r requirements.txt
 
-# 2. Limpiar y crear carpeta para los modelos
-echo "--- Preparando carpeta de modelos ---"
-rm -rf modelos/*
+# --- Paso 2: Limpiar y crear la carpeta de modelos ---
+echo "--- Preparando carpeta de modelos (limpiando primero) ---"
+rm -rf modelos
 mkdir -p modelos
 
-# 3. Descargar los modelos con las URLs directas y correctas
-echo "--- Descargando modelos desde el Release ${RELEASE_VERSION} ---"
-curl -L -o modelos/modelo_estatico.h5 "${BASE_URL}/modelo_estatico_web.h5"
-curl -L -o modelos/encoder_estatico.pkl "${BASE_URL}/encoder_estatico_web.pkl"
-curl -L -o modelos/modelo_dinamico.h5 "${BASE_URL}/modelo_dinamico_web.h5"
-curl -L -o modelos/encoder_dinamico.pkl "${BASE_URL}/encoder_dinamico_web.pkl"
+# --- Paso 3: Descargar los modelos con las URLs directas y correctas ---
+echo "--- Descargando modelos desde el Release v1.2 ---"
+curl -L -o modelos/modelo_estatico.h5 "https://github.com/WilsonGgEz/reconocedor-lengua-senas/releases/download/v1.2/modelo_estatico.h5"
+curl -L -o modelos/encoder_estatico.pkl "https://github.com/WilsonGgEz/reconocedor-lengua-senas/releases/download/v1.2/encoder_estatico.pkl"
+curl -L -o modelos/modelo_dinamico.h5 "https://github.com/WilsonGgEz/reconocedor-lengua-senas/releases/download/v1.2/modelo_dinamico.h5"
+curl -L -o modelos/encoder_dinamico.pkl "https://github.com/WilsonGgEz/reconocedor-lengua-senas/releases/download/v1.2/encoder_dinamico.pkl"
 
-# 4. Verificar que los archivos se descargaron correctamente
-echo "--- Verificando archivos descargados (tamaños esperados en MB para .h5) ---"
+# --- Paso 4: Verificar que los archivos se descargaron correctamente ---
+echo "--- Verificando archivos descargados (los tamaños deben ser KB y MB, no bytes) ---"
 ls -lh modelos/
 
-echo "--- Proceso de construcción finalizado ---"
+echo "--- Proceso de construcción finalizado con éxito ---"

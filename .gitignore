@@ -14,3 +14,8 @@ __pycache__/
 # Ignorar archivos específicos del sistema operativo
 .DS_Store
 Thumbs.db
+
+/modelos/
+/datos/
+
+/data/static/

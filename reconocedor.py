@@ -602,10 +602,10 @@ class LenguaSeñasDual:
         """Cargar ambos modelos (versión WEB) con diagnóstico mejorado."""
         print("--- INICIANDO CARGA DE MODELOS ---")
         
-        modelo_estatico_path = 'modelos/modelo_estatico_web.h5'
-        encoder_estatico_path = 'modelos/encoder_estatico_web.pkl'
-        modelo_dinamico_path = 'modelos/modelo_dinamico_web.h5'
-        encoder_dinamico_path = 'modelos/encoder_dinamico_web.pkl'
+        modelo_estatico_path = 'modelos/modelo_estatico.h5'
+        encoder_estatico_path = 'modelos/encoder_estatico.pkl'
+        modelo_dinamico_path = 'modelos/modelo_dinamico.h5'
+        encoder_dinamico_path = 'modelos/encoder_dinamico.pkl'
 
         # Modelo estático
         print(f"Buscando modelo estático en: '{os.path.abspath(modelo_estatico_path)}'")
@@ -636,7 +636,7 @@ class LenguaSeñasDual:
             print("❌ ¡ERROR CRÍTICO! No se encontró el archivo del modelo dinámico.")
 
         print("--- CARGA DE MODELOS FINALIZADA ---")
-        
+
     def modo_reconocimiento(self):
         """Reconocimiento simplificado con visualización en webcam"""
         print("\n🎯 MODO RECONOCIMIENTO")

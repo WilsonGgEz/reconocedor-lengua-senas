@@ -6,7 +6,7 @@ echo "--- Iniciando proceso de construcción v2 ---"
 
 # ** VERIFICA ESTE NÚMERO DE VERSIÓN **
 # Este debe ser el nombre de la "tag" que creaste en tu Release de GitHub (ej: v1.0 o v1.1)
-RELEASE_VERSION="test2"
+RELEASE_VERSION="v1.2"
 
 # Construimos la URL base para no repetir
 BASE_URL="https://github.com/WilsonGgEz/reconocedor-lengua-senas/releases/download/${RELEASE_VERSION}"
@@ -22,10 +22,10 @@ mkdir -p modelos
 
 # 3. Descargar los modelos con las URLs directas y correctas
 echo "--- Descargando modelos desde el Release ${RELEASE_VERSION} ---"
-curl -L -o modelos/modelo_estatico_web.h5 "${BASE_URL}/modelo_estatico_web.h5"
-curl -L -o modelos/encoder_estatico_web.pkl "${BASE_URL}/encoder_estatico_web.pkl"
-curl -L -o modelos/modelo_dinamico_web.h5 "${BASE_URL}/modelo_dinamico_web.h5"
-curl -L -o modelos/encoder_dinamico_web.pkl "${BASE_URL}/encoder_dinamico_web.pkl"
+curl -L -o modelos/modelo_estatico.h5 "${BASE_URL}/modelo_estatico_web.h5"
+curl -L -o modelos/encoder_estatico.pkl "${BASE_URL}/encoder_estatico_web.pkl"
+curl -L -o modelos/modelo_dinamico.h5 "${BASE_URL}/modelo_dinamico_web.h5"
+curl -L -o modelos/encoder_dinamico.pkl "${BASE_URL}/encoder_dinamico_web.pkl"
 
 # 4. Verificar que los archivos se descargaron correctamente
 echo "--- Verificando archivos descargados (tamaños esperados en MB para .h5) ---"

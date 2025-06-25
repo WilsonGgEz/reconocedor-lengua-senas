@@ -2,112 +2,178 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reconocedor de Lengua de Señas - Lógica en Cliente</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #121212; color: #e0e0e0; display: flex; flex-direction: column; align-items: center; padding: 20px; gap: 20px; }
-        .main-container { display: flex; gap: 20px; align-items: flex-start; }
-        h1 { color: #bb86fc; text-align: center; width: 100%; }
-        .container { position: relative; width: 640px; height: 480px; }
-        #videoElement, #outputCanvas { position: absolute; top: 0; left: 0; border-radius: 8px; transform: scaleX(-1); }
-        .status { background-color: #1e1e1e; padding: 15px; border-radius: 8px; width: 300px; box-sizing: border-box; }
-        button { background-color: #bb86fc; color: #121212; border: none; padding: 10px 15px; font-size: 16px; border-radius: 5px; cursor: pointer; margin-top: 10px; transition: background-color 0.3s; width: 100%; }
-        button:hover { background-color: #9f6de0; }
-        p { margin: 10px 0; font-size: 1.1em; }
-        #prediccion { min-height: 50px; background-color: #2c2c2c; padding: 10px; border-radius: 5px; font-family: 'Courier New', Courier, monospace; word-wrap: break-word; }
-    .sentence-container {
+    /* Estilos base para todos los dispositivos */
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #121212;
+        color: #e0e0e0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 10px;
+        gap: 20px;
+    }
+    h1 {
+        color: #bb86fc;
+        text-align: center;
         width: 100%;
-        max-width: 980px; /* Ancho total del contenedor de la frase */
-        margin-top: 20px;
+        font-size: 1.8em;
+        margin-bottom: 0;
+    }
+    h3 {
+        margin-top: 0;
+        border-bottom: 1px solid #444;
+        padding-bottom: 5px;
+    }
+
+    /* Contenedor principal que nos permitirá reordenar */
+    #app-container {
+        display: flex;
+        flex-direction: column; /* Apilado por defecto (móvil) */
+        gap: 20px;
+        width: 100%;
+        align-items: center;
+    }
+
+    /* Estilos para los bloques principales */
+    .container, .status, .sentence-container {
         background-color: #1e1e1e;
         padding: 15px;
         border-radius: 8px;
-        box-sizing: border-box;}
+        width: 100%;
+        max-width: 640px;
+        box-sizing: border-box;
+    }
+
+    /* Reordenamiento para la vista móvil (Móvil Primero) */
+    .sentence-container { order: 3; } /* La frase */
+    .container { order: 1; }          /* La cámara */
+    .status { order: 2; }             /* La predicción */
+
+
+    /* Contenedor de la cámara */
+    .container {
+        position: relative;
+        padding-top: 75%; /* Proporción 4:3 */
+        height: 0;
+        background-color: #000; /* Fondo negro mientras carga */
+    }
+    #videoElement, #outputCanvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        border-radius: 8px;
+        transform: scaleX(-1);
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Bloque de predicción y frase */
+    p#prediccion {
+        min-height: 50px;
+        background-color: #2c2c2c;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: 'Courier New', Courier, monospace;
+        word-wrap: break-word;
+        font-size: 1.2em;
+    }
     .text-box {
         min-height: 60px;
         background-color: #2c2c2c;
         padding: 10px;
         border-radius: 5px;
         font-family: 'Courier New', Courier, monospace;
-        word-wrap: break-word; /* Para que el texto no se salga */
+        word-wrap: break-word;
         font-size: 1.2em;
         color: #fff;
-        border: 1px solid #444;}
-    .clear-btn {
-        background-color: #cf6679; /* Un color rojo para el botón de borrar */
-        margin-top: 10px;
-        width: auto; /* Hacemos que el botón no ocupe todo el ancho */
-        padding: 8px 15px;}
-    .clear-btn:hover {background-color: #b04e5f;}
-    .speak-btn {
-        background-color: #03dac6; /* Un color verde/turquesa */
-        margin-top: 10px;
-        width: auto;
-        padding: 8px 15px;}
-    .speak-btn:hover {
-        background-color: #01bfa5;}
-    #backspaceBtn {
-        background-color: #cf6679;
-        color: #121212;}
-    #backspaceBtn:hover {
-        background-color: #b04e5f;}
-    #addSpaceBtn {
-        background-color: #555; /* Un color neutro para el botón de espacio */
-        color: #fff;}
-    #addSpaceBtn:hover {
-        background-color: #777;}
-
-        @keyframes blink {50% 
-        {
-            opacity: 0;
-        }}
-
-    /* 2. Creamos el cursor como un "pseudo-elemento" después del contenido de #sentenceBox */
-    #sentenceBox::after {
-        content: ''; /* Obligatorio para que el pseudo-elemento se muestre */
-        display: inline-block;
-        width: 2px; /* Ancho del cursor */
-        height: 1.1em; /* Altura del cursor, relativa al tamaño de la fuente */
-        background-color: #fff; /* Color del cursor */
-        vertical-align: bottom;
-        margin-left: 2px; /* Pequeño espacio entre el texto y el cursor */
-        
-        /* 3. Aplicamos la animación de parpadeo */
+        border: 1px solid #444;
+    }
+    #sentenceBox::after { /* Estilos del cursor */
+        content: ''; display: inline-block; width: 2px; height: 1.1em;
+        background-color: #fff; vertical-align: bottom; margin-left: 2px;
         animation: blink 1s step-end infinite;
     }
+    @keyframes blink { 50% { opacity: 0; } }
 
-    </style>
+    /* Estilos para los botones y grupos de botones */
+    .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    button {
+        flex-grow: 1; /* Hace que los botones en un grupo compartan el espacio */
+        background-color: #bb86fc;
+        color: #121212;
+        border: none;
+        padding: 12px 10px;
+        font-size: 16px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    #addSpaceBtn { background-color: #555; color: #fff; }
+    .speak-btn { background-color: #03dac6; }
+    .clear-btn, #backspaceBtn { background-color: #cf6679; }
+
+
+    /* Media Query para pantallas grandes (PC) */
+    @media (min-width: 960px) {
+        #app-container {
+            flex-direction: row; /* Volvemos a la vista de lado a lado */
+            flex-wrap: wrap; /* Permitimos que los elementos se envuelvan */
+            justify-content: center;
+            align-items: flex-start;
+            max-width: 1000px;
+        }
+
+        /* Restauramos el orden original para PC */
+        .container { order: 1; width: 640px; height: 480px; padding-top: 0; }
+        .status { order: 2; width: 300px; }
+        .sentence-container { order: 3; width: 100%; max-width: 960px; }
+
+        h1 { font-size: 2.5em; }
+    }
+</style>
+
 </head>
 <body>
     <h1>Reconocedor de Lengua de Señas</h1>
-    <div class="main-container">
+
+    <main id="app-container">
+
+        <div class="sentence-container">
+            <h3>Frase Generada</h3>
+            <div id="sentenceBox" class="text-box"></div>
+            <div class="button-group">
+                <button id="speakBtn" class="speak-btn">🔊 Leer</button>
+                <button id="toggleModeBtn">🔄 Modo</button> <button id="clearSentenceBtn" class="clear-btn">🗑️ Borrar</button>
+            </div>
+        </div>
+
         <div class="container">
             <video id="videoElement" style="display: none;"></video>
             <canvas id="outputCanvas" width="640" height="480"></canvas>
         </div>
+
         <div class="status">
-            <h3>Estado del Sistema</h3>
-            <p>Modo Actual: <strong id="modo">ESTATICO</strong></p>
-            <button id="toggleModeBtn">🔄 Cambiar Modo</button>
-            <hr style="margin: 15px 0;">
-            
-            <h3>Predicción Actual</h3>
+            <h3 id="prediction-title">Predicción Actual</h3>
             <p id="prediccion">Cargando...</p>
-
-            <button id="fixPredictionBtn">➕ Añadir Letra/Palabra</button>
-            <button id="backspaceBtn">⌫ Retroceso</button>
-            <button id="addSpaceBtn"> Espacio</button>
+            <div class="button-group">
+                <button id="fixPredictionBtn">➕ Añadir</button>
+                <button id="addSpaceBtn"> Espacio</button>
+                <button id="backspaceBtn" class="clear-btn">⌫</button>
+            </div>
         </div>
-    </div>
 
-    <div class="sentence-container">
-        <h3>Frase Generada</h3>
-        <div id="sentenceBox" class="text-box"></div>
-        <button id="speakBtn" class="speak-btn">🔊 Leer Frase</button>
-        <button id="clearSentenceBtn" class="clear-btn">🗑️ Borrar Todo</button>
-    </div>
+    </main>
 
     <script type="module">
     document.addEventListener('DOMContentLoaded', (event) => {
@@ -115,7 +181,6 @@
         const canvasElement = document.getElementById('outputCanvas');
         const canvasCtx = canvasElement.getContext('2d');
         const prediccionElement = document.getElementById('prediccion');
-        const modoElement = document.getElementById('modo');
         const toggleModeBtn = document.getElementById('toggleModeBtn');
         const fixPredictionBtn = document.getElementById('fixPredictionBtn');
         const sentenceBox = document.getElementById('sentenceBox');
@@ -123,6 +188,7 @@
         const speakBtn = document.getElementById('speakBtn');
         const addSpaceBtn = document.getElementById('addSpaceBtn');
         const backspaceBtn = document.getElementById('backspaceBtn');
+        const predictionTitleElement = document.getElementById('prediction-title');
 
         // --- ESTADO GLOBAL Y PARÁMETROS DE OPTIMIZACIÓN ---
         let modoActual = 'estatico';
@@ -172,6 +238,11 @@
             // Si el navegador no es compatible, ocultamos el botón y avisamos por consola.
             console.log("Lo siento, tu navegador no soporta Text-to-Speech.");
             speakBtn.style.display = 'none';
+        }
+
+        // Función para actualizar el título H3
+        function updatePredictionTitle() {
+            predictionTitleElement.textContent = `Predicción Actual - ${modoActual.toUpperCase()}`;
         }
 
         // --- LÓGICA DE CÁLCULO DE CARACTERÍSTICAS ---
@@ -297,10 +368,6 @@
         }
 
         // Asignamos las funciones a los clics de los botones
-        fixPredictionBtn.addEventListener('click', fixPrediction);
-        clearSentenceBtn.addEventListener('click', clearSentence);
-        addSpaceBtn.addEventListener('click', addSpace);
-        backspaceBtn.addEventListener('click', backspace);
 
         async function toggleMode() {
             if (isChangingMode) return; // Si ya estamos cambiando, no hacer nada
@@ -317,7 +384,8 @@
                 const response = await fetch('/toggle_mode', { method: 'POST' });
                 const data = await response.json();
                 modoActual = data.modo;
-                modoElement.textContent = modoActual.toUpperCase();
+                updatePredictionTitle(); // <-- Llamamos a la función que actualiza el título
+
             } catch (error) {
                 console.error("Error al cambiar de modo:", error);
             } finally {
@@ -329,6 +397,8 @@
         fixPredictionBtn.addEventListener('click', fixPrediction);
         clearSentenceBtn.addEventListener('click', clearSentence);
         toggleModeBtn.addEventListener('click', toggleMode);
+        addSpaceBtn.addEventListener('click', addSpace);
+        backspaceBtn.addEventListener('click', backspace);
 
         // --- BUCLE PRINCIPAL DE PROCESAMIENTO ---
         function onResults(results) {
@@ -389,6 +459,7 @@
             height: 480
         });
         camera.start();
+        updatePredictionTitle(); // <-- Lo establecemos por primera vez
         prediccionElement.textContent = "Esperando gesto...";
     });
 </script>
